@@ -281,3 +281,13 @@ The source target is [AstraSentinel on GitHub](https://github.com/dsreecharan/As
 | Internal Markdown path and anchor check, `git diff --cached --check` | **PASS**, exit 0. Verified local documentation links and staged whitespace. |
 
 The verification recordings and generated demo media remain local. Linux/WSL and browsers other than Edge were untested in this pass. The controlled clip exercises the rules; it provides no detector accuracy or aerial-event accuracy estimate.
+
+### README presentation verification
+
+| Command or check | Result |
+| --- | --- |
+| `Invoke-WebRequest` for each Shields.io badge URL in `README.md` | **PASS**, 6 of 6 returned HTTP 200 and `image/svg+xml`. |
+| Inline `node.exe -` preview using Marked 16.4.2, GitHub Markdown CSS 5.8.1, and Playwright with Edge | **PASS**, exit 0. All six badges and both screenshots loaded at 1280×960 and 390×844 without horizontal page overflow. |
+| Inline `backend/.venv/Scripts/python.exe -` documentation and PNG checks, plus `git diff --cached --check` | **PASS**, exit 0. Checked 74 local links and anchors across 13 Markdown files. Both 1366×768 PNGs matched the original controlled-demo captures and contained no PNG metadata. |
+
+The README uses captures from the verified controlled replay, including its saved audit after restart. This documentation change did not rerun the application suites or verify the rendered page on GitHub.

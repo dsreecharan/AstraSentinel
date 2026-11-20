@@ -31,6 +31,8 @@ The controlled MP4 uses the public-domain NASA still from `skimage.data.astronau
 
 The system smoke test builds a separate two-track controlled MP4 at 1152×512 with 45 frames at 10 source FPS. A second copy of the same still is fixed at x=640. The left copy moves into the x=385–610 image ROI and stops after frame 37. The crowd threshold is one, so two accepted anonymous person tracks over three frames exercise the count rule. This footage has no capture timestamp or world calibration. The Windows encode used in Prompt 6 had SHA-256 `b7eebbac7fd455257fbf988f07be4a29a8ccd8f75d8170c9e44efbb040f925db`. [Build the controlled input](../docs/SMOKE_TEST.md#inputs)
 
+The [README screenshots](../README.md#dashboard) show this controlled replay and its saved audit after restart. The portrait in the replay is credited to NASA via scikit-image and is shown here to document the demo. [NASA media usage guidelines](https://www.nasa.gov/nasa-brand-center/images-and-media/)
+
 ## Source provenance template
 
 Complete one record per source before use.

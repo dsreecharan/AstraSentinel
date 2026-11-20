@@ -1,12 +1,41 @@
-# AstraSentinel
+<h1 align="center">AstraSentinel</h1>
 
-A local public-safety replay dashboard by **Team Astra Fly**, built for CipherCop 2026. AstraSentinel runs YOLO26n and ByteTrack on permissioned MP4 footage, raises explainable rule candidates, and records an operator’s review in an append-only audit trail.
+<p align="center"><strong>Public-safety replay with explainable alerts and human review</strong><br>
+Team Astra Fly · CipherCop 2026 · Track 1</p>
 
-- **Replay** annotated footage with anonymous track IDs scoped to each run.
-- **Inspect** crowd-threshold and zone-entry candidates with footage time, confirmation details, and optional evidence thumbnails.
-- **Review** candidates in the dashboard and check that the audit survives a backend restart. Map markers require valid fixed-scene calibration.
+<p align="center">
+  <img alt="Python 3.11" src="https://img.shields.io/badge/Python-3.11-306998?style=flat-square&amp;logo=python&amp;logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-087F74?style=flat-square&amp;logo=fastapi&amp;logoColor=white">
+  <img alt="YOLO26n and ByteTrack" src="https://img.shields.io/badge/YOLO26n%20%2B%20ByteTrack-4E43AA?style=flat-square">
+  <img alt="React and TypeScript" src="https://img.shields.io/badge/React%20%2B%20TypeScript-24405A?style=flat-square&amp;logo=react&amp;logoColor=61DAFB">
+  <img alt="SQLite" src="https://img.shields.io/badge/SQLite-0B5576?style=flat-square&amp;logo=sqlite&amp;logoColor=white">
+  <img alt="MapLibre" src="https://img.shields.io/badge/MapLibre-31556F?style=flat-square">
+</p>
 
-`Permissioned MP4 → OpenCV → YOLO26n + ByteTrack → Rules → SQLite → Dashboard → Review and audit`
+<p align="center">
+  <a href="#run-the-controlled-demo">Quickstart</a> ·
+  <a href="#dashboard">Screenshots</a> ·
+  <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+  <a href="docs/BENCHMARKS.md">Benchmarks</a>
+</p>
+
+## Dashboard
+
+![AstraSentinel dashboard running the controlled replay with two anonymous person tracks and an outlined image region](docs/images/dashboard-replay.png)
+
+*Annotated replay from a controlled scenario. Two copies of a NASA still exercise real person detection and tracking.*
+
+![Dashboard after backend restart showing a zone-entry acknowledgement, an image-space geolocation notice, and the saved audit timeline](docs/images/dashboard-review.png)
+
+*After restart, the dashboard still shows the two candidates and the operator’s saved acknowledgement. The image-space zone has no map marker.*
+
+Screenshots captured from the running app. Replay imagery is credited to NASA via scikit-image. [Source provenance](data/README.md#controlled-rule-verification-source)
+
+## How it works
+
+1. **Replay** permissioned MP4 footage through OpenCV, YOLO26n, and ByteTrack. Track IDs are anonymous and scoped to a single run.
+2. **Inspect** crowd and zone-entry candidates with footage time, rule measurements, and an optional confirmation frame. Map markers require valid fixed-scene calibration.
+3. **Review** each candidate with a reason. SQLite stores the decision and append-only audit so the dashboard can recover them after a restart.
 
 ## Run the controlled demo
 
@@ -114,6 +143,6 @@ Register an approved local MP4, record its provenance, and use the root `.env` f
 | CPU measurements and what they cover | [Benchmarks](docs/BENCHMARKS.md) |
 | Verified tests, results, and remaining gaps | [Verification log](docs/STATUS.md) |
 
-AstraSentinel is a loopback hackathon MVP with human review. Detector accuracy, surveyed geolocation, and capture-to-alert latency remain unmeasured. Keep footage, weights, credentials, runtime databases, and captured evidence local. [Privacy and license inventory](data/README.md)
+AstraSentinel is a loopback hackathon MVP with human review. Detector accuracy, surveyed geolocation, and capture-to-alert latency remain unmeasured. Keep private footage, weights, credentials, runtime databases, and retained evidence out of version control. [Privacy and license inventory](data/README.md)
 
 Experimental transport and storage work is available separately on [`phase2/optional-profiles`](https://github.com/dsreecharan/AstraSentinel/tree/phase2/optional-profiles).
