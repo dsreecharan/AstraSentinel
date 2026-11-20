@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "astra-fly-backend"
+version = "0.1.0"
+description = "Astra Fly public safety MVP API"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi==0.165.0",
+    "uvicorn[standard]==0.54.0",
+    "pydantic==2.14.4",
+    "sqlalchemy==2.0.58",
+    "alembic==1.20.1",
+    "opencv-python==4.14.0.94",
+]
+
+[project.optional-dependencies]
+test = [
+    "httpx==0.28.1",
+    "httpx2==2.16.2",  # TestClient transport used by the locked Starlette release.
+    "pytest==9.2.0",
+]
+vision = [
+    "ultralytics==8.4.216",
+    "lap==0.5.14",
+]
+
+[tool.setuptools.packages.find]
+include = ["app", "app.*"]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["tests"]
+addopts = ["--strict-config", "--strict-markers"]
+markers = ["real_inference: opt-in smoke with local YOLO26n weights and a permissioned MP4"]

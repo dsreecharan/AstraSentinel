@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "run_id": "run_test_01",
+  "source_id": "source_test_01",
+  "frame_index": 120,
+  "video_time_ms": 4000,
+  "captured_at": null,
+  "processed_at": "2026-11-20T13:05:00Z",
+  "mode": "replay",
+  "geo_status": "image_roi_only",
+  "tracks": [
+    {
+      "track_id": "run_test_01:7",
+      "object_class": "person",
+      "detector_confidence": 0.82,
+      "bbox_xyxy": [122.0, 220.0, 165.0, 332.0],
+      "bottom_center_px": [143.5, 332.0],
+      "location": null,
+      "horizontal_error_m": null
+    }
+  ]
+}
