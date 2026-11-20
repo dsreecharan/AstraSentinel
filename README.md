@@ -13,7 +13,8 @@ Team Astra Fly · CipherCop 2026 · Track 1</p>
 </p>
 
 <p align="center">
-  <a href="#run-the-controlled-demo">Quickstart</a> ·
+  <a href="#one-click-start-on-windows">Start on Windows</a> ·
+  <a href="#run-the-controlled-demo">Setup</a> ·
   <a href="#dashboard">Screenshots</a> ·
   <a href="docs/ARCHITECTURE.md">Architecture</a> ·
   <a href="docs/BENCHMARKS.md">Benchmarks</a>
@@ -36,6 +37,12 @@ Screenshots captured from the running app. Replay imagery is credited to NASA vi
 1. **Replay** permissioned MP4 footage through OpenCV, YOLO26n, and ByteTrack. Track IDs are anonymous and scoped to a single run.
 2. **Inspect** crowd and zone-entry candidates with footage time, rule measurements, and an optional confirmation frame. Map markers require valid fixed-scene calibration.
 3. **Review** each candidate with a reason. SQLite stores the decision and append-only audit so the dashboard can recover them after a restart.
+
+## One-click start on Windows
+
+Double-click [Start-AstraSentinel.bat](Start-AstraSentinel.bat) after the one-time install and source setup. It uses the root `.env`, starts the backend and dashboard on ports 8000 and 5173, and opens your browser when both are ready. Enter the private operator token under **Operator access**, then select a source and start replay. Press **Enter** in the launcher window to stop both servers.
+
+For a fresh checkout, follow the setup below. After preparing the controlled demo, you can start that configuration with `.\Start-AstraSentinel.bat --env-file data/evidence/controlled-demo/.env` from PowerShell. Add `--check` to verify startup and immediately stop both servers without opening a browser.
 
 ## Run the controlled demo
 
@@ -64,32 +71,30 @@ Download the [pinned NASA sample](https://github.com/scikit-image/scikit-image/b
 
 Verify the downloads with `Get-FileHash -Algorithm SHA256`. The demo opens the configured local checkpoint.
 
-### Start the backend
+### Prepare the replay
 
-From the repository root, prepare a new private stage and start the API.
+From the repository root, prepare a new private stage.
 
 ```powershell
 $Demo = Join-Path (Get-Location).Path "data/evidence/controlled-demo"
 $Still = Join-Path $env:TEMP "astronaut.png"
 .\backend\.venv\Scripts\python.exe scripts/smoke_test.py prepare --controlled-only --output $Demo --still $Still --weights data/weights/yolo26n.pt
 if ($LASTEXITCODE -ne 0) { throw "Demo preparation failed" }
-Set-Location backend
-.\.venv\Scripts\python.exe -m app.serve --env-file (Join-Path $Demo ".env")
 ```
 
 Preparation creates a separate SQLite database, a private operator token, and the configured image region. The incident queue starts empty. For another clean run, choose a new `$Demo` directory.
 
 ### Start the dashboard
 
-In a second terminal, from the repository root:
+From the repository root, install the dashboard dependencies once and start both servers using the prepared stage.
 
 ```powershell
-Set-Location frontend
-npm.cmd ci --no-audit --no-fund
-npm.cmd run dev
+npm.cmd --prefix frontend ci --no-audit --no-fund
+if ($LASTEXITCODE -ne 0) { throw "Dashboard install failed" }
+.\Start-AstraSentinel.bat --env-file (Join-Path $Demo ".env")
 ```
 
-1. Open [the dashboard](http://localhost:5173). The [API health endpoint](http://127.0.0.1:8000/api/v1/health) runs on port 8000.
+1. The launcher opens [the dashboard](http://localhost:5173). The [API health endpoint](http://127.0.0.1:8000/api/v1/health) runs on port 8000.
 2. Under **Operator access**, enter `ASTRA_OPERATOR_TOKEN` from the stage’s private `.env`, without the surrounding quotes.
 3. Select **Controlled fixture - NASA still with two tracks**, then **Start replay**. The run should show two review candidates, one for the crowd threshold and one for image-region entry. The image-space alert has unavailable geolocation.
 4. Open the zone candidate, inspect the confirmation frame, and acknowledge or dismiss it with a reason. The audit timeline records that decision. Restart the API with the same stage to check persistence.

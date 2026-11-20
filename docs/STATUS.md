@@ -57,6 +57,7 @@ The required validation path is licensed aerial MP4 → actual inference → ano
 
 - [x] Package reproducible smoke commands, the operator walkthrough, source and model provenance, license inventory, and verified screenshots and recording.
 - [x] Rehearse the clean-checkout controlled demo independently of the private aerial excerpt. Consolidate the public setup and configuration guidance.
+- [x] Provide and verify a one-click Windows launcher for the configured workspace or a prepared replay stage.
 - [x] Record benchmark hardware, source, model, workload, measurement boundaries, and results.
 - [x] Record limitations, untested behavior, and the slide/PDF content outline in the submission material.
 - [ ] Confirm the distribution license, collect notices for the selected package, approve media for sharing, and assemble the final slides or PDF.
@@ -291,3 +292,17 @@ The verification recordings and generated demo media remain local. Linux/WSL and
 | Inline `backend/.venv/Scripts/python.exe -` documentation and PNG checks, plus `git diff --cached --check` | **PASS**, exit 0. Checked 74 local links and anchors across 13 Markdown files. Both 1366×768 PNGs matched the original controlled-demo captures and contained no PNG metadata. |
 
 The README uses captures from the verified controlled replay, including its saved audit after restart. This documentation change did not rerun the application suites or verify the rendered page on GitHub.
+
+### One-click Windows launcher verification
+
+| Command or check | Result |
+| --- | --- |
+| `Start-AstraSentinel.bat` with the workspace `.env`, then Enter | **PASS**, exit 0. The backend and Vite started, the default browser connected to the dashboard, and Enter stopped both services. |
+| `Start-AstraSentinel.bat --check` invoked by absolute path from outside the checkout | **PASS**, exit 0. Health and source readiness passed, the launcher did not open a new browser, and both loopback ports were released after shutdown. |
+| `Start-AstraSentinel.bat --env-file <controlled-stage>/.env` and inline `node.exe -` Playwright smoke in Edge | **PASS**, exit 0 from the browser smoke. The dashboard received annotated MJPEG, reported YOLO26n and ByteTrack provenance through REST, received both rule candidates over WebSocket, and stored the authenticated acknowledgement and audit. |
+| Duplicate `Start-AstraSentinel.bat --check` and startup with missing weights or invalid analysis configuration | **PASS**, all three expected refusals returned exit 1. The duplicate launch left the first service healthy. A backend failure after launch released both ports. |
+| `.\.venv\Scripts\python.exe -m pytest -q -rs` from `backend/`, with a temporary database and the approved aerial MP4 and local YOLO26n checkpoint | **PASS**, exit 0. 67 passed in 16.89 s, 0 failed, 0 skipped. |
+| `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd test`, and `npm.cmd run build` from `frontend/` | **PASS**, all exit 0. Seven tests passed in two files, 0 failed, 0 skipped. Vite retained its MapLibre chunk-size warning. |
+| `.\backend\.venv\Scripts\python.exe -m py_compile scripts/launch.py`, inline Markdown link validation, and `git diff --cached --check` | **PASS**, all exit 0. |
+
+Windows launch and shutdown were exercised from a console. File Explorer and force-closing the console were not independently exercised. A fresh checkout still requires one-time installation and replay source setup.
