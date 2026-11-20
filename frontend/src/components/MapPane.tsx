@@ -4,8 +4,9 @@ import { mapData } from "../map/data";
 
 const MapView = lazy(() => import("./MapView"));
 
-export function MapPane({ source, incident, incidents, revision, onSelect }: {
-  source?: Source; incident: Incident | null; incidents: Incident[]; revision: unknown; onSelect: (id: string) => void;
+export function MapPane({ source, incident, incidents, simulated, revision, onSelect }: {
+  source?: Source; incident: Incident | null; incidents: Incident[]; simulated: boolean;
+  revision: unknown; onSelect: (id: string) => void;
 }) {
   const sourceId = source?.id;
   const calibrated = source?.geo_mode === "calibrated";
@@ -33,7 +34,8 @@ export function MapPane({ source, incident, incidents, revision, onSelect }: {
     <section className="panel map-panel" aria-labelledby="map-heading">
       <header className="panel-header">
         <h2 id="map-heading">Map</h2>
-        <span className="chip tone-muted">{!source ? "Awaiting source" : calibrated ? "Calibration configured" : "Image space"}</span>
+        <span className="chip tone-muted">{!source ? "Awaiting source" : simulated ? "Simulated coordinates" :
+          calibrated ? "Calibration configured" : "Image space"}</span>
       </header>
       <div className="map-stage">
         {data.features.length > 0 ? <Suspense fallback={<div className="empty-state" role="status">Loading calibrated map…</div>}><MapView key={sourceId} data={data} onSelect={onSelect} /></Suspense> : (

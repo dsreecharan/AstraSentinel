@@ -2,6 +2,8 @@
 
 ## Current milestone
 
+**Local judge workflow verified on Windows in Edge.** The default launcher prepares two controlled replay sources, enables tokenless local judge access, and keeps its database separate from the team's token-protected workspace. A real mapped candidate, image-space criteria, an uploaded aerial MP4, and operator review passed the browser and restart rehearsal.
+
 **Main-branch demo and documentation verified on Windows on 2026-11-20.** The controlled walkthrough can start from a fresh checkout with the documented NASA still and local YOLO26n checkpoint. It starts with an empty incident queue and demonstrates both enabled rules through real inference and restart recovery. The [benchmark report](BENCHMARKS.md) records earlier measurements for both validation sources. The [submission checklist](SUBMISSION_CHECKLIST.md) records open release decisions.
 
 The required validation path is licensed aerial MP4 → actual inference → anonymous ByteTrack → crowd and zone rules with geospatial context → SQLite → dashboard → operator review → durable audit.
@@ -58,6 +60,7 @@ The required validation path is licensed aerial MP4 → actual inference → ano
 - [x] Package reproducible smoke commands, the operator walkthrough, source and model provenance, license inventory, and verified screenshots and recording.
 - [x] Rehearse the clean-checkout controlled demo independently of the private aerial excerpt. Consolidate the public setup and configuration guidance.
 - [x] Provide and verify a one-click Windows launcher for the configured workspace or a prepared replay stage.
+- [x] Verify the isolated judge workflow with both sample references, direct MP4 upload, and durable review.
 - [x] Record benchmark hardware, source, model, workload, measurement boundaries, and results.
 - [x] Record limitations, untested behavior, and the slide/PDF content outline in the submission material.
 - [ ] Confirm the distribution license, collect notices for the selected package, approve media for sharing, and assemble the final slides or PDF.
@@ -306,3 +309,17 @@ The README uses captures from the verified controlled replay, including its save
 | `.\backend\.venv\Scripts\python.exe -m py_compile scripts/launch.py`, inline Markdown link validation, and `git diff --cached --check` | **PASS**, all exit 0. |
 
 Windows launch and shutdown were exercised from a console. File Explorer and force-closing the console were not independently exercised. A fresh checkout still requires one-time installation and replay source setup.
+
+### Judge demo and MP4 upload verification
+
+| Command or check | Result |
+| --- | --- |
+| `Start-AstraSentinel.bat --check` on first run and after sample preparation, followed by `Start-AstraSentinel.bat --env-file .env --check` | **PASS**, exit 0 in both judge and token modes. The clean judge database contained two sample sources, no seeded incidents, and no operator token. |
+| `.\backend\.venv\Scripts\python.exe scripts/smoke_test.py prepare --judge --output <stage>` and `node.exe <stage>/browser_smoke.cjs <licensed-aerial-mp4>` | **PASS**, both exit 0 on Windows Edge with the real local checkpoint. The simulated-map run produced one zone-entry candidate at 3,300 ms. The image-space run produced a crowd candidate at 200 ms and a zone entry at 3,300 ms. The browser showed real MJPEG, a labeled MapLibre polygon and marker, and durable review as `local-judge`. |
+| Same Edge rehearsal, using **Upload MP4** and restarting the backend | **PASS**, exit 0. The permissioned aerial excerpt was uploaded without a token, registered without a public file path, selected, and replayed through EOF with real inference. It had no calibration or configured rules. The uploaded source and reviewed audit survived restart, and the browser reconnected. |
+| `.\.venv\Scripts\python.exe -m pytest -q -rs tests/test_uploads.py` from `backend/` | **PASS**, exit 0, 3 passed. Covered concurrent checksum deduplication, restart, malformed and oversized uploads, cleanup, permissions, and judge origin and loopback checks. |
+| `.\.venv\Scripts\python.exe -m pytest -q -rs` from `backend/` with an isolated database, approved aerial excerpt, and local weights | **PASS**, exit 0, 70 passed in 16.91 s, 0 failed and 0 skipped. |
+| `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd test`, and `npm.cmd run build` from `frontend/` | **PASS**, all exit 0. Seven tests passed in two files. Vite retained its existing MapLibre chunk-size warning. |
+| `openapi-typescript` 7.13.0 against the local exported schema, inline documentation checks, and `git diff --cached --check` | **PASS**, exit 0. Verified 79 local links and anchors, the bundled still checksum, and the real 1366×768 map screenshot. |
+
+An initial browser run used a shared replay session. A subsequent upload succeeded at the API, but the Edge test could not read its response from the inspector cache. The final isolated rehearsal checked the source through REST and completed replay and restart. The map uses simulated controls, so this run supplies no field geolocation or accuracy measurement. Face verification remains unavailable. Other browsers, Linux/WSL judge launch, and additional drone codecs were untested in this pass.

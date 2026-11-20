@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, messageOf, type ReviewInput } from "./api/client";
-import { AccessDialog, ReviewDialog } from "./components/Dialogs";
+import { AccessDialog, ReviewDialog, UploadDialog } from "./components/Dialogs";
 import { AuditPane, IncidentPane } from "./components/IncidentPane";
 import { MapPane } from "./components/MapPane";
 import { ReplayPane } from "./components/ReplayPane";
@@ -22,7 +22,7 @@ export default function App() {
   const [preferredSource, setPreferredSource] = useState("");
   const [selection, setSelection] = useState("");
   const [token, setToken] = useState("");
-  const [modal, setModal] = useState<"access" | { id: string; decision: ReviewInput["decision"] } | null>(null);
+  const [modal, setModal] = useState<"access" | "upload" | { id: string; decision: ReviewInput["decision"] } | null>(null);
   const [runAction, setRunAction] = useState<"start" | "stop" | null>(null);
   const [actionError, setActionError] = useState("");
   const { snapshot, error, events, refresh } = useDashboard(offset);
@@ -35,16 +35,19 @@ export default function App() {
   const run = currentRun?.source_id === chosen?.id ? currentRun : null;
   const page = snapshot?.offset === offset ? snapshot.incidents : undefined;
   const incidents = page?.items ?? [];
-  const incident = incidents.find(({ id }) => id === selection) ?? incidents[0] ?? null;
+  const incident = incidents.find(({ id }) => id === selection) ?? incidents.find(({ source_id }) => source_id === chosen?.id) ?? null;
   const mapSource = incident ? sources.find(({ id }) => id === incident.source_id) : chosen;
+  const simulated = !!mapSource && !!snapshot?.simulatedSourceIds.includes(mapSource.id);
   const license = licenseLink(chosen?.license_url);
   const backendLabel = error ? "Backend unavailable" :
     snapshot?.health.status === "degraded" ? "Backend degraded" : snapshot ? "Backend online" : "Connecting to backend";
   const writeReady = !!snapshot && !error && !runAction;
+  const judgeMode = snapshot?.access.mode === "judge";
+  const canOperate = judgeMode || !!token;
 
   async function act(action: "start" | "stop") {
     if (!writeReady) return;
-    if (!token) { setModal("access"); return; }
+    if (!canOperate) { setModal("access"); return; }
     setActionError("");
     setRunAction(action);
     try {
@@ -59,7 +62,17 @@ export default function App() {
   }
 
   function openReview(decision: ReviewInput["decision"]) {
-    if (incident) setModal(token ? { id: incident.id, decision } : "access");
+    if (incident) setModal(canOperate ? { id: incident.id, decision } : "access");
+  }
+
+  async function upload(file: File, title: string, attribution: string) {
+    const source = await api.upload(file, title, attribution, token);
+    setPreferredSource(source.id);
+    setSelection("");
+    setOffset(0);
+    setActionError("");
+    setModal(null);
+    refresh();
   }
 
   async function review(id: string, body: ReviewInput) {
@@ -85,9 +98,9 @@ export default function App() {
           <span className="service-status" data-health={error ? "unavailable" : snapshot?.health.status} role="status">
             {backendLabel}
           </span>
-          <button className="subtle" type="button" onClick={() => setModal("access")}>
+          {judgeMode ? <span className="chip tone-cyan">Local judge demo</span> : <button className="subtle" type="button" onClick={() => setModal("access")}>
             {token ? "Operator access set" : "Operator access"}
-          </button>
+          </button>}
         </div>
       </header>
 
@@ -103,12 +116,14 @@ export default function App() {
           <div className="source-field">
             <label htmlFor="replay-source">Replay source</label>
             <select id="replay-source" value={chosen?.id ?? ""} disabled={active || !snapshot || !!error}
-              onChange={(event) => { setPreferredSource(event.target.value); setActionError(""); }}>
+              onChange={(event) => { setPreferredSource(event.target.value); setSelection(""); setActionError(""); }}>
               {sources.length === 0 && <option value="">{!snapshot && !error ? "Loading sources…" : "No registered sources"}</option>}
               {sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}
             </select>
           </div>
           <div className="replay-controls">
+            <button className="subtle" type="button" disabled={!writeReady || active}
+              onClick={() => setModal(canOperate ? "upload" : "access")}>Upload MP4</button>
             <button className="primary start-control" type="button" disabled={!writeReady || active || !chosen}
               onClick={() => { void act("start"); }}>
               <span className="icon-start" aria-hidden="true" />{runAction === "start" ? "Starting…" : "Start replay"}
@@ -140,16 +155,17 @@ export default function App() {
 
       <main className="workspace">
         <ReplayPane run={run} disconnected={!!error} />
-        <MapPane source={mapSource} incident={incident} incidents={incidents} revision={snapshot} onSelect={setSelection} />
+        <MapPane source={mapSource} incident={incident} incidents={incidents} simulated={simulated}
+          revision={snapshot} onSelect={setSelection} />
         <IncidentPane
           page={page} offset={offset} selected={incident} onSelect={setSelection} onReview={openReview}
           onPage={(value) => { setOffset(value); setSelection(""); }} unavailable={!!error}
-          loading={!page && !error} canWrite={writeReady}
+          loading={!page && !error} canWrite={writeReady} simulated={simulated}
         />
         <AuditPane incident={incident} revision={snapshot} />
       </main>
       <footer className="workspace-status">
-        <span>Replay operations</span>
+        <span>{judgeMode ? "Face verification unavailable · Consent and a licensed model required" : "Replay operations"}</span>
         <span className="event-connection" data-events={events} role="status">
           Events {events === "connected" ? "connected" : events === "reconnecting" ? "reconnecting" : "connecting"}
         </span>
@@ -159,7 +175,8 @@ export default function App() {
         <AccessDialog hasToken={!!token} onClose={() => setModal(null)}
           onSave={(value) => { setToken(value); setModal(null); setActionError(""); }} />
       )}
-      {modal && modal !== "access" && (
+      {modal === "upload" && <UploadDialog onClose={() => setModal(null)} onSubmit={upload} />}
+      {modal && typeof modal === "object" && (
         <ReviewDialog key={modal.id} decision={modal.decision}
           onClose={() => setModal(null)} onSubmit={(body) => review(modal.id, body)} />
       )}

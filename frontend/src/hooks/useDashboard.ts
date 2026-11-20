@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, eventUrl, messageOf, type Health, type IncidentPage, type Run, type Source } from "../api/client";
+import { api, eventUrl, messageOf, type AccessPolicy, type Health, type IncidentPage, type Run, type Source } from "../api/client";
 import { serializeRefresh, subscribeEvents, type EventConnection } from "../api/events";
 
 interface Snapshot {
   health: Health;
+  access: AccessPolicy;
   sources: Source[];
+  simulatedSourceIds: string[];
   run: Run | null;
   incidents: IncidentPage;
   offset: number;
@@ -23,11 +25,12 @@ export function useDashboard(offset: number) {
       if (controller.signal.aborted) return;
       try {
         const signal = controller.signal;
-        const [health, sources, run, incidents] = await Promise.all([
-          api.health(signal), api.sources(signal), api.runStatus(signal), api.incidents(offset, signal),
+        const [health, access, sources, run, incidents] = await Promise.all([
+          api.health(signal), api.access(signal), api.sources(signal), api.runStatus(signal), api.incidents(offset, signal),
         ]);
         if (!signal.aborted) {
-          setSnapshot({ health, sources: sources.items, run: run.run, incidents, offset });
+          setSnapshot({ health, access, sources: sources.items, simulatedSourceIds: sources.simulated_source_ids ?? [],
+            run: run.run, incidents, offset });
           setError("");
         }
       } catch (issue) {

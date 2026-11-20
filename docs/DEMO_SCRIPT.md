@@ -1,12 +1,20 @@
 # Three-minute operator walkthrough
 
-## Before the walkthrough
+## Judge walkthrough
+
+1. Double-click `Start-AstraSentinel.bat` and wait for **Local judge demo** and **Events connected**. Select **Judge sample · Simulated map coordinates** and start replay. Explain that the polygon and point use virtual ground controls applied to actual anonymous person tracks.
+2. Open the zone-entry candidate, show its confirmation frame and the map marker, then acknowledge it with a reason. Point to the saved decision in **Audit timeline**. Keep the map and incident's **Simulated coordinates** labels visible.
+3. Run **Judge sample · Crowd and image-space zone** to show the crowd threshold and a pixel-defined zone. Point out the unavailable-geolocation state. Use **Upload MP4** to register permissioned footage and play it from the source selector. Face verification is unavailable. [One-click setup](../README.md#one-click-start-on-windows)
+
+## Team rehearsal with the licensed aerial excerpt
+
+### Before the walkthrough
 
 1. Use the [controlled demo quickstart](../README.md#run-the-controlled-demo) for a fresh checkout. For the two-source presentation below, use the [system smoke-test runbook](SMOKE_TEST.md) and register the image ROI once. The controlled-only preparation already configures it.
 2. Start one backend on `127.0.0.1:8000` with the stage's private `.env`. Start the frontend on port 5173 and open the dashboard. Confirm **Backend online**, **Events connected**, and an empty incident queue. [Local dashboard](http://localhost:5173)
 3. Open **Operator access** and enter the private token before screen sharing. Select the first replay and bring up **Source provenance**. If available, keep a recording of a verified run open in a second tab.
 
-## Presenter timing
+### Presenter timing
 
 | Time | Operator action and narration |
 | --- | --- |
@@ -19,6 +27,6 @@
 
 For a controlled-only presentation, use the opening to show the fixture provenance and explain the two animated copies of the NASA still. Continue with the controlled replay at 0:55.
 
-## Fallback during the demonstration
+### Fallback during the demonstration
 
 Use the **27.76-second recorded verification of an earlier replay** in `data/evidence/prompt7/recorded-prior-verification.webm`. It captures the same verified sequence of real aerial replay, the controlled rules, review, backend shutdown, reconnect, and the restored audit. The screenshots in the same directory came from that rehearsal and include both candidate views and the audit after restart. Keep the recording identified as prerecorded while presenting it. Confirm the intended sharing rights before attaching the capture to the submission. [Capture verification log](STATUS.md#prompt-7-benchmark-and-submission-verification)

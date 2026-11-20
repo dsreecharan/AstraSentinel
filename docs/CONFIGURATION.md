@@ -13,7 +13,8 @@ For a custom source, copy `.env.example` to `.env` at the repository root and se
 | `ASTRA_MODEL_WEIGHTS` | `data/weights/yolo26n.pt` | Local trusted Ultralytics YOLO26n detection checkpoint. |
 | `ASTRA_ANALYSIS_CONFIG` | Empty | Optional workspace-relative JSON file with source-specific rules, calibration, and thumbnail permission. |
 | `ASTRA_OPERATOR_NAME` | `local-operator` | Server-side actor recorded on a successful review. |
-| `ASTRA_OPERATOR_TOKEN` | Empty | Private bearer token for the local operator role. An empty value leaves write routes disabled. |
+| `ASTRA_OPERATOR_TOKEN` | Empty | Private bearer token for the local operator role. An empty value disables writes in token mode. |
+| `ASTRA_JUDGE_MODE` | `0` | Set to `1` in a disposable loopback workspace to allow the configured browser origin to write as `local-judge` without a manual token. |
 
 Open [the health endpoint](http://127.0.0.1:8000/api/v1/health) in a browser or use `curl.exe -fsS http://127.0.0.1:8000/api/v1/health` on Windows and `curl -fsS http://127.0.0.1:8000/api/v1/health` on Linux. The expected result is HTTP 200 with this body.
 
@@ -53,7 +54,9 @@ Place the trusted detection checkpoint at `ASTRA_MODEL_WEIGHTS` and verify its r
 
 The Windows validation setup uses `ASTRA_MODEL_WEIGHTS=YOLO26/yolo26n.pt` in the workspace `.env`. Its local source ID is `aerial-intersection-validation`. [Footage attribution and SHA-256](../data/README.md#local-aerial-replay-validation-source)
 
-On Windows, use the [one-click launcher](../README.md#one-click-start-on-windows) to start both servers with the root `.env`. To start them separately, run `.\.venv\Scripts\python.exe -m app.serve --env-file ../.env` on Windows or `.venv/bin/python -m app.serve --env-file ../.env` on Linux from `backend/`. In a second terminal with the installed frontend dependencies, run `npm.cmd run dev` on Windows or `npm run dev` on Linux from `frontend/`. The API launcher rejects reload and multiple workers and holds a process lock for the SQLite database. For API clients, send the registered source ID and `mode: "replay"` to `POST /api/v1/runs/start` with the local operator bearer token. Follow `GET /api/v1/runs/status` or the WebSocket `run_status` notifications.
+On Windows, run `.\Start-AstraSentinel.bat --env-file .env` from the repository root to start both servers with your own configuration. Without arguments, the launcher opens an isolated [judge workspace](../README.md#one-click-start-on-windows). To start the API separately, run `.\.venv\Scripts\python.exe -m app.serve --env-file ../.env` on Windows or `.venv/bin/python -m app.serve --env-file ../.env` on Linux from `backend/`. In a second terminal with the installed frontend dependencies, run `npm.cmd run dev` on Windows or `npm run dev` on Linux from `frontend/`. The API launcher rejects reload and multiple workers and holds a process lock for the SQLite database. For API clients in token mode, send the registered source ID and `mode: "replay"` to `POST /api/v1/runs/start` with the local operator bearer token. Follow `GET /api/v1/runs/status` or the WebSocket `run_status` notifications.
+
+**Upload MP4** saves operator-approved footage under `ASTRA_MEDIA_DIR/uploads`. The registered source and video persist on the machine after restart. Assign an image ROI or a validated fixed-scene calibration separately to enable location-based rules. Do not delete a registered file while retaining its replay history unless you intend to make the source unavailable for future replay.
 
 During replay, `GET /api/v1/stream/annotated.mjpg` serves the latest annotated JPEG and ends at stop, EOF, or error. A browser served from the allowlisted origin should use a CORS-enabled `<img crossorigin="anonymous">` for the stream. To stop playback, send `{"run_id":"<run-id>"}` to `POST /api/v1/runs/stop` with the operator token. The worker stops cooperatively after any in-flight native decode or inference call returns.
 

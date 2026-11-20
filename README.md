@@ -40,9 +40,24 @@ Screenshots captured from the running app. Replay imagery is credited to NASA vi
 
 ## One-click start on Windows
 
-Double-click [Start-AstraSentinel.bat](Start-AstraSentinel.bat) after the one-time install and source setup. It uses the root `.env`, starts the backend and dashboard on ports 8000 and 5173, and opens your browser when both are ready. Enter the private operator token under **Operator access**, then select a source and start replay. Press **Enter** in the launcher window to stop both servers.
+Double-click [Start-AstraSentinel.bat](Start-AstraSentinel.bat) to open the **local judge demo**. On first launch it builds two MP4 samples from the bundled NASA still and opens a private SQLite workspace. Judges can start replay and record a review without entering a token. Press **Enter** in the launcher window to stop both servers.
 
-For a fresh checkout, follow the setup below. After preparing the controlled demo, you can start that configuration with `.\Start-AstraSentinel.bat --env-file data/evidence/controlled-demo/.env` from PowerShell. Add `--check` to verify startup and immediately stop both servers without opening a browser.
+1. Select **Judge sample · Simulated map coordinates** and click **Start replay**. Real YOLO26n and ByteTrack produce a zone-entry candidate. The MapLibre polygon and marker use simulated ground control points. The map and incident both label the coordinates as simulated.
+2. Select **Judge sample · Crowd and image-space zone** to see both rules with evidence and no map marker. Acknowledge or dismiss a candidate with a reason. The audit survives relaunch.
+3. Click **Upload MP4**, choose up to 100 MiB of footage you have permission to use, and enter its title and attribution. The file is added to the replay selector and kept on this machine. Uploaded footage starts without calibration or configured rules.
+
+Face verification is unavailable in the judge demo. The replay uses anonymous track IDs. [Operator walkthrough](docs/DEMO_SCRIPT.md)
+
+<details>
+<summary>See the simulated-map sample running</summary>
+
+![Judge dashboard with real person tracks, a simulated restricted-zone polygon and incident marker, and the pending operator review](docs/images/dashboard-judge-map.png)
+
+Captured in the running judge workspace. Replay imagery is credited to NASA via scikit-image.
+
+</details>
+
+For a fresh checkout, install the dependencies below and supply `data/weights/yolo26n.pt`. The launcher also recognizes an existing `YOLO26/yolo26n.pt`. For the normal token-protected workspace, run `.\Start-AstraSentinel.bat --env-file .env`. Add `--check` to verify startup and release both ports without opening a browser.
 
 ## Run the controlled demo
 
@@ -60,9 +75,10 @@ Set-Location AstraSentinel
 Set-Location backend
 uv sync --locked --extra test --extra vision --python 3.11 --no-python-downloads
 Set-Location ..
+npm.cmd --prefix frontend ci --no-audit --no-fund
 ```
 
-Download the [pinned NASA sample](https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/astronaut.png) as `astronaut.png` to your temporary directory. Supply the trusted [YOLO26n detection checkpoint](https://github.com/ultralytics/assets/releases/tag/v8.4.0) at `data/weights/yolo26n.pt` under the applicable [Ultralytics terms](https://www.ultralytics.com/license).
+The repository includes the [pinned NASA sample](https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/astronaut.png) at `data/samples/astronaut.png`. Supply the trusted [YOLO26n detection checkpoint](https://github.com/ultralytics/assets/releases/tag/v8.4.0) under the applicable [Ultralytics terms](https://www.ultralytics.com/license). With those inputs, the one-click judge demo is ready. The steps below are for the separate token-protected controlled rehearsal.
 
 | Input | Expected SHA-256 |
 | --- | --- |
@@ -77,7 +93,7 @@ From the repository root, prepare a new private stage.
 
 ```powershell
 $Demo = Join-Path (Get-Location).Path "data/evidence/controlled-demo"
-$Still = Join-Path $env:TEMP "astronaut.png"
+$Still = 'data/samples/astronaut.png'
 .\backend\.venv\Scripts\python.exe scripts/smoke_test.py prepare --controlled-only --output $Demo --still $Still --weights data/weights/yolo26n.pt
 if ($LASTEXITCODE -ne 0) { throw "Demo preparation failed" }
 ```
@@ -86,11 +102,9 @@ Preparation creates a separate SQLite database, a private operator token, and th
 
 ### Start the dashboard
 
-From the repository root, install the dashboard dependencies once and start both servers using the prepared stage.
+From the repository root, start both servers using the prepared stage.
 
 ```powershell
-npm.cmd --prefix frontend ci --no-audit --no-fund
-if ($LASTEXITCODE -ne 0) { throw "Dashboard install failed" }
 .\Start-AstraSentinel.bat --env-file (Join-Path $Demo ".env")
 ```
 
@@ -128,7 +142,7 @@ Install the same Python and Node versions in Linux, then run `uv sync --locked -
 ```bash
 demo="$PWD/data/evidence/controlled-demo"
 backend/.venv/bin/python scripts/smoke_test.py prepare --controlled-only --output "$demo" \
-  --still "${TMPDIR:-/tmp}/astronaut.png" --weights data/weights/yolo26n.pt &&
+  --still data/samples/astronaut.png --weights data/weights/yolo26n.pt &&
   (cd backend && .venv/bin/python -m app.serve --env-file "$demo/.env")
 ```
 

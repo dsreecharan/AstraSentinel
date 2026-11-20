@@ -1,7 +1,8 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query, Request, Response
+from pydantic import Field
 from sqlalchemy import select
 
 from app.auth import require_operator
@@ -10,6 +11,7 @@ from app.contracts.events import AuditEntry, Incident, ReviewInput, ReviewStatus
 from app.contracts.geo import Geofence, GeofenceInput
 from app.db.models import GeofenceRow, SourceRow
 from app.errors import ServiceError
+from app.services.uploads import upload_source
 
 from . import errors
 
@@ -18,6 +20,11 @@ router = APIRouter(prefix="/api/v1", responses=errors(503))
 
 class SourceList(ContractModel):
     items: list[Source]
+    simulated_source_ids: list[str] = Field(default_factory=list)
+
+
+class AccessPolicy(ContractModel):
+    mode: Literal["judge", "token"]
 
 
 class IncidentPage(ContractModel):
@@ -33,18 +40,40 @@ class GeofenceList(ContractModel):
     items: list[Geofence]
 
 
-@router.get("/sources")
+@router.get("/access")
+def access_policy(request: Request) -> AccessPolicy:
+    return AccessPolicy(mode="judge" if request.app.state.judge_mode else "token")
+
+
+@router.post(
+    "/sources/upload", dependencies=[Depends(require_operator)], responses=errors(401, 413, 415, 422),
+    openapi_extra={
+        "parameters": [
+            {"name": name, "in": "header", "required": True, "schema": {"type": "string"}}
+            for name in ("X-Astra-Title", "X-Astra-Attribution", "X-Astra-Rights-Confirmed")
+        ],
+        "requestBody": {"required": True, "content": {"video/mp4": {"schema": {"type": "string", "format": "binary"}}}},
+    },
+)
+async def create_uploaded_source(request: Request) -> Source:
+    return await upload_source(request)
+
+
+@router.get("/sources", response_model_exclude_defaults=True)
 def list_sources(request: Request) -> SourceList:
     with request.app.state.sessions() as session:
         rows = session.scalars(select(SourceRow).order_by(SourceRow.id))
         items = []
+        simulated_source_ids = []
         for row in rows:
             source = Source.model_validate(row, from_attributes=True)
             settings = request.app.state.analysis.sources.get(source.id)
             calibration = settings.calibration if settings else None
             eligible = calibration is not None and calibration.video_sha256 == source.video_sha256
+            if eligible and calibration.reference == "simulated":
+                simulated_source_ids.append(source.id)
             items.append(source.model_copy(update={"geo_mode": "calibrated" if eligible else "unavailable"}))
-        return SourceList(items=items)
+        return SourceList(items=items, simulated_source_ids=simulated_source_ids)
 
 
 @router.get("/incidents", responses=errors(422))

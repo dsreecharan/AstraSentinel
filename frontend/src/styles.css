@@ -204,6 +204,9 @@ summary { cursor: pointer; color: #b9c9da; }
 .modal p { font-size: .84rem; line-height: 1.4; margin-bottom: .7rem; }
 .modal label { display: block; font-size: .79rem; margin-bottom: .3rem; font-weight: 650; color: #cbd8e5; }
 .modal input, .modal textarea { width: 100%; font-size: .87rem; }
+.modal input + label { margin-top: .65rem; }
+.modal .rights-confirmation { display: flex; align-items: flex-start; gap: .5rem; margin-top: .75rem; }
+.modal .rights-confirmation input { width: auto; margin-top: .22rem; accent-color: var(--accent); }
 .modal textarea { resize: vertical; min-height: 5rem; }
 .modal .error-text { margin-top: .5rem; }
 .modal-actions { justify-content: flex-end; flex-wrap: wrap; gap: .45rem; margin-top: .85rem; }

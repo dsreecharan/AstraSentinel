@@ -9,6 +9,7 @@ export type Geofence = Schemas["Geofence"];
 export type AuditEntry = Schemas["AuditEntry"];
 export type ReviewInput = Schemas["ReviewInput"];
 export type Health = Schemas["Health"];
+export type AccessPolicy = Schemas["AccessPolicy"];
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 export const INCIDENT_PAGE_SIZE = 50;
@@ -21,18 +22,23 @@ export class ApiError extends Error {
 
 async function request<T>(path: string, options: {
   signal?: AbortSignal;
-  write?: { token: string; body: object };
+  write?: { token: string; body: object; headers?: Record<string, string> };
 } = {}): Promise<T> {
-  const timeout = AbortSignal.timeout(5000);
   const { signal, write } = options;
+  const binary = write?.body instanceof Blob;
+  const timeout = AbortSignal.timeout(binary ? 120_000 : 5000);
   let response: Response;
   try {
     response = await fetch(`${apiBase}${path}`, {
       signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       cache: "no-store",
       method: write ? "POST" : "GET",
-      headers: write ? { Authorization: `Bearer ${write.token}`, "Content-Type": "application/json" } : {},
-      body: write ? JSON.stringify(write.body) : undefined,
+      headers: write ? {
+        ...(write.token ? { Authorization: `Bearer ${write.token}` } : {}),
+        "Content-Type": binary ? "video/mp4" : "application/json",
+        ...write.headers,
+      } : {},
+      body: write?.body instanceof Blob ? write.body : write ? JSON.stringify(write.body) : undefined,
     });
   } catch {
     throw new ApiError(0, "network", "Unable to reach the replay backend.");
@@ -51,7 +57,17 @@ const incidentPath = (id: string) => `/api/v1/incidents/${encodeURIComponent(id)
 
 export const api = {
   health: (signal?: AbortSignal) => request<Health>("/api/v1/health", { signal }),
+  access: (signal?: AbortSignal) => request<AccessPolicy>("/api/v1/access", { signal }),
   sources: (signal?: AbortSignal) => request<Schemas["SourceList"]>("/api/v1/sources", { signal }),
+  upload: (file: File, title: string, attribution: string, token: string) => request<Source>("/api/v1/sources/upload", {
+    write: {
+      token, body: file, headers: {
+        "X-Astra-Title": encodeURIComponent(title),
+        "X-Astra-Attribution": encodeURIComponent(attribution),
+        "X-Astra-Rights-Confirmed": "true",
+      },
+    },
+  }),
   runStatus: (signal?: AbortSignal) => request<Schemas["RunSnapshot"]>("/api/v1/runs/status", { signal }),
   incidents: (offset: number, signal?: AbortSignal) => request<IncidentPage>(
     `/api/v1/incidents?limit=${INCIDENT_PAGE_SIZE}&offset=${offset}`, { signal },

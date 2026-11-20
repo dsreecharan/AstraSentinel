@@ -48,6 +48,7 @@ def create_app(
         raise ValueError("ASTRA_FRONTEND_ORIGIN must specify a usable port")
 
     path = db_path if db_path is not None else database_path()
+    media_root = media_directory()
     engine = sqlite_engine(path)
     sessions = sessionmaker(engine)
     broker = EventBroker()
@@ -63,7 +64,7 @@ def create_app(
     incidents = IncidentService(sessions, broker)
     weights_path = local_path("ASTRA_MODEL_WEIGHTS", "data/weights/yolo26n.pt")
     video = VideoWorker(
-        RunStore(sessions), broker, media_directory(),
+        RunStore(sessions), broker, media_root,
         vision_factory if vision_factory is not None else lambda: UltralyticsAdapter(weights_path),
         analysis, incidents,
     )
@@ -92,13 +93,16 @@ def create_app(
     app.state.frontend_origin = origin
     app.state.operator_token = os.getenv("ASTRA_OPERATOR_TOKEN", "")
     app.state.operator_name = os.getenv("ASTRA_OPERATOR_NAME", "local-operator").strip() or "local-operator"
+    app.state.judge_mode = os.getenv("ASTRA_JUDGE_MODE") == "1"
+    app.state.media_directory = media_root
     app.state.sessions = sessions
     app.state.broker = broker
     app.state.incidents = incidents
     app.state.analysis = analysis
     app.state.video = video
     app.add_middleware(
-        CORSMiddleware, allow_origins=[origin], allow_methods=["GET", "POST"], allow_headers=["Authorization"]
+        CORSMiddleware, allow_origins=[origin], allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "X-Astra-Title", "X-Astra-Attribution", "X-Astra-Rights-Confirmed"],
     )
     app.include_router(storage.router)
     app.include_router(runs.router)

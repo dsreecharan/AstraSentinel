@@ -12,6 +12,7 @@ import sys
 import time
 import webbrowser
 from pathlib import Path
+from tempfile import mkdtemp
 from urllib.request import ProxyHandler, build_opener
 
 from dotenv import dotenv_values
@@ -24,6 +25,29 @@ HOST = "127.0.0.1"
 API_URL = f"http://{HOST}:8000"
 DEFAULT_DASHBOARD = "http://localhost:5173"
 LOCAL_HTTP = build_opener(ProxyHandler({}))
+
+
+def prepare_judge() -> Path:
+    from smoke_test import prepare
+
+    from app.runtime import exclusive_worker
+
+    evidence = ROOT / "data/evidence"
+    evidence.mkdir(parents=True, exist_ok=True)
+    env_file = evidence / "judge.env"
+    with exclusive_worker(evidence / "judge-preparation"):
+        if env_file.is_file():
+            return env_file
+        default_weights = ROOT / "data/weights/yolo26n.pt"
+        if not default_weights.is_file():
+            default_weights = ROOT / "YOLO26/yolo26n.pt"
+        weights = ROOT / os.getenv("ASTRA_MODEL_WEIGHTS", str(default_weights))
+        if not weights.is_file():
+            raise RuntimeError("Place the licensed YOLO26n checkpoint at data/weights/yolo26n.pt. See README.md.")
+        stage = Path(mkdtemp(prefix="judge-", dir=evidence)) / "replay"
+        prepare(stage, ROOT / "data/samples/astronaut.png", weights, judge=True)
+        (stage / ".env").replace(env_file)
+    return env_file
 
 
 def ensure_running(services: dict[str, subprocess.Popen]) -> None:
@@ -76,7 +100,7 @@ def stop_services(services: dict[str, subprocess.Popen]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--env-file", type=Path, default=ROOT / ".env", help="Use a prepared local replay configuration")
+    parser.add_argument("--env-file", type=Path, help="Use an existing replay configuration instead of the default judge demo")
     parser.add_argument("--check", action="store_true", help="Check startup and stop both servers without opening a browser")
     args = parser.parse_args()
     services: dict[str, subprocess.Popen] = {}
@@ -84,9 +108,15 @@ def main() -> int:
         node = shutil.which("node.exe")
         if not node or not VITE.is_file():
             raise RuntimeError("Install Node.js 24 and run npm.cmd ci from frontend. See README.md.")
-        if not args.env_file.is_file():
+        for port in (8000, 5173):
+            with socket.socket() as probe:
+                probe.settimeout(0.5)
+                if probe.connect_ex((HOST, port)) == 0:
+                    raise RuntimeError(f"Port {port} is already in use. Stop the running server or close its launcher first.")
+        env_file = args.env_file or prepare_judge()
+        if not env_file.is_file():
             raise RuntimeError("The replay .env file is missing. Follow the one-time setup in README.md.")
-        config = {name: value for name, value in dotenv_values(args.env_file).items() if value is not None}
+        config = {name: value for name, value in dotenv_values(env_file).items() if value is not None}
         config.update(os.environ)
         dashboard = config.get("ASTRA_FRONTEND_ORIGIN", DEFAULT_DASHBOARD)
         if dashboard not in {DEFAULT_DASHBOARD, f"http://{HOST}:5173"}:
@@ -94,15 +124,9 @@ def main() -> int:
         weights = config.get("ASTRA_MODEL_WEIGHTS", "data/weights/yolo26n.pt")
         if not (ROOT / weights).is_file():
             raise RuntimeError("The configured local YOLO26n checkpoint is missing. Check ASTRA_MODEL_WEIGHTS in your .env.")
-        for port in (8000, 5173):
-            with socket.socket() as probe:
-                probe.settimeout(0.5)
-                if probe.connect_ex((HOST, port)) == 0:
-                    raise RuntimeError(f"Port {port} is already in use. Stop the running server or close its launcher first.")
-
         print("Starting the AstraSentinel backend and dashboard...")
         services["Backend"] = subprocess.Popen(
-            [sys.executable, "-m", "app.serve", "--env-file", str(args.env_file.resolve())],
+            [sys.executable, "-m", "app.serve", "--env-file", str(env_file.resolve())],
             cwd=BACKEND, stdin=subprocess.DEVNULL, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         )
         services["Dashboard"] = subprocess.Popen(
@@ -114,7 +138,10 @@ def main() -> int:
         print(f"AstraSentinel is ready at {dashboard}")
         if args.check:
             return 0
-        print("For replay controls, enter ASTRA_OPERATOR_TOKEN from the selected private .env under Operator access.")
+        if config.get("ASTRA_JUDGE_MODE") == "1":
+            print("Local judge mode. Start a sample replay or upload an MP4 in the dashboard.")
+        else:
+            print("Enter ASTRA_OPERATOR_TOKEN from the selected private .env under Operator access.")
         print("Press Enter in this window to stop both servers.")
         webbrowser.open(dashboard)
         while True:

@@ -10,7 +10,7 @@ function ReviewStatus({ incident }: { incident: Incident }) {
   </span>;
 }
 
-function Measurements({ incident }: { incident: Incident }) {
+function Measurements({ incident, simulated }: { incident: Incident; simulated: boolean }) {
   const details = incident.rule_details;
   const meters = measuredError(incident);
   return (
@@ -32,6 +32,7 @@ function Measurements({ incident }: { incident: Incident }) {
         </>
       )}
       <dt>Cooldown</dt><dd>{details.cooldown_ms} ms</dd>
+      {simulated && incident.location && <><dt>Map reference</dt><dd>Simulated coordinates</dd></>}
       {meters !== null && <><dt>Horizontal uncertainty</dt><dd>±{meters} m</dd></>}
       {incident.reviewer && <><dt>Reviewer</dt><dd>{incident.reviewer}</dd></>}
     </dl>
@@ -46,10 +47,10 @@ function IncidentEvidence({ incident }: { incident: Incident }) {
     onError={() => setFailed(true)} />;
 }
 
-export function IncidentPane({ page, offset, onPage, selected, onSelect, onReview, unavailable, loading, canWrite }: {
+export function IncidentPane({ page, offset, onPage, selected, onSelect, onReview, unavailable, loading, canWrite, simulated }: {
   page?: IncidentPage; offset: number; onPage: (offset: number) => void; selected: Incident | null;
   onSelect: (id: string) => void; onReview: (decision: ReviewInput["decision"]) => void;
-  unavailable: boolean; loading: boolean; canWrite: boolean;
+  unavailable: boolean; loading: boolean; canWrite: boolean; simulated: boolean;
 }) {
   const items = page?.items ?? [];
   const total = page?.total;
@@ -94,7 +95,7 @@ export function IncidentPane({ page, offset, onPage, selected, onSelect, onRevie
         {selected && (
           <article className="incident-details" aria-label="Selected incident">
             <div className="detail-heading"><h3>Selected incident</h3><span className="tone-amber">Review severity</span></div>
-            <Measurements incident={selected} />
+            <Measurements incident={selected} simulated={simulated} />
             <IncidentEvidence key={selected.id} incident={selected} />
           </article>
         )}

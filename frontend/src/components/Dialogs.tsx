@@ -87,3 +87,64 @@ export function ReviewDialog({ decision, onSubmit, onClose }: {
     </Dialog>
   );
 }
+
+export function UploadDialog({ onSubmit, onClose }: {
+  onSubmit: (file: File, title: string, attribution: string) => Promise<void>; onClose: () => void;
+}) {
+  const [file, setFile] = useState<File>();
+  const [title, setTitle] = useState("");
+  const [attribution, setAttribution] = useState("");
+  const [rights, setRights] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!file || !title.trim() || !attribution.trim() || !rights || busy) return;
+    if (!/\.mp4$/i.test(file.name) || file.size === 0 || file.size > 100 * 1024 * 1024) {
+      setError("Choose a nonempty MP4 up to 100 MiB.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await onSubmit(file, title.trim(), attribution.trim());
+    } catch (issue) {
+      setError(messageOf(issue));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog title="Upload MP4 replay" busy={busy} onClose={onClose}>
+      <p className="muted">Up to 100 MiB. The file stays on this machine. Map locations require a separate fixed-scene calibration.</p>
+      <form onSubmit={(event) => { void submit(event); }}>
+        <label htmlFor="upload-file">MP4 file</label>
+        <input id="upload-file" type="file" accept=".mp4,video/mp4" required disabled={busy}
+          onChange={(event) => {
+            const next = event.target.files?.[0];
+            setFile(next);
+            if (next) setTitle(next.name.replace(/\.mp4$/i, "").slice(0, 160));
+          }} />
+        <label htmlFor="upload-title">Source title</label>
+        <input id="upload-title" value={title} maxLength={160} required disabled={busy}
+          onChange={(event) => setTitle(event.target.value)} />
+        <label htmlFor="upload-attribution">Owner or attribution</label>
+        <input id="upload-attribution" value={attribution} maxLength={160} required disabled={busy}
+          onChange={(event) => setAttribution(event.target.value)} />
+        <label className="rights-confirmation">
+          <input type="checkbox" required checked={rights} disabled={busy} onChange={(event) => setRights(event.target.checked)} />
+          <span>I have permission to process and display this footage.</span>
+        </label>
+        {error && <p className="error-text" role="alert">{error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="subtle" disabled={busy} onClick={onClose}>Cancel</button>
+          <button type="submit" className="primary" disabled={busy || !file || !title.trim() || !attribution.trim() || !rights}>
+            {busy ? "Validating…" : "Add replay source"}
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}

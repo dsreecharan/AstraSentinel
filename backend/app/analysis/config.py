@@ -35,6 +35,7 @@ class ZoneSettings(ContractModel):
 
 class FixedCalibration(ContractModel):
     camera: Literal["fixed"]
+    reference: Literal["geographic", "simulated"] = "geographic"
     video_sha256: Sha256
     frame_size_px: FrameSize
     pixel_points: Annotated[list[PixelPoint], Field(min_length=4)]

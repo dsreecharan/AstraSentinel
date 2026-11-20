@@ -7,7 +7,9 @@ Use these names and semantics in Pydantic, FastAPI OpenAPI, and the TypeScript c
 | Method and path | Input | Success response |
 | --- | --- | --- |
 | `GET /api/v1/health` | — | `200 Health` |
-| `GET /api/v1/sources` | — | `200 {items: Source[]}` |
+| `GET /api/v1/access` | — | `200 {mode: "token" or "judge"}` |
+| `GET /api/v1/sources` | — | `200 {items: Source[], simulated_source_ids?: string[]}` |
+| `POST /api/v1/sources/upload` | Raw `video/mp4` body, metadata and permission headers | `200 Source`, reusing an existing record when its digest matches |
 | `POST /api/v1/runs/start` | `{source_id, mode: "replay"}` | `202 Run` with `status: "starting"` |
 | `POST /api/v1/runs/stop` | `{run_id}` | `202 Run` with `status: "stopping"`, or `200 Run` if already terminal |
 | `GET /api/v1/runs/status` | — | `200 {run: Run or null}` with the active run or most recently created run |
@@ -21,7 +23,9 @@ Use these names and semantics in Pydantic, FastAPI OpenAPI, and the TypeScript c
 | `POST /api/v1/geofences` | `GeofenceInput` | `201 Geofence` |
 | `WS /ws/events` | Read-only browser connection with an allowed origin | JSON `EventEnvelope` messages |
 
-All POSTs require `Authorization: Bearer <operator-token>` from local configuration. Resolve the actor to a stable operator label on the server and keep the credential out of URLs, logs, and the built frontend. Bind the demo to loopback and configure explicit UI origins for CORS and the WebSocket handshake. Serve video and evidence with `Cache-Control: no-store` and restrict cross-site embedding. Source registration, rule settings, and calibration use trusted local configuration. Keep runtime paths private and resolve source files under the allowed media directory, including symlink checks.
+POST requests use `Authorization: Bearer <operator-token>` in token mode. The judge workspace sets `ASTRA_JUDGE_MODE=1`. In that mode, requests from the exact configured frontend origin with a loopback host and peer can write as `local-judge` without a token. Review still requires a decision and reason. Keep credentials out of URLs, logs, and the built frontend. Bind the demo to loopback and configure explicit UI origins for CORS and WebSocket. Serve video and evidence with `Cache-Control: no-store`. Rule settings and calibration use trusted local configuration. Keep runtime paths private and resolve source files under the allowed media directory, including symlink checks.
+
+Uploads require `X-Astra-Title` and `X-Astra-Attribution` with percent-encoded text up to 160 characters each, and `X-Astra-Rights-Confirmed: true`. The API enforces a 100 MiB body limit, checks the MP4 container and first decoded frame, and keeps the bytes privately under the media directory with a server-generated name. New uploads have no calibration, rule settings, or evidence retention by default.
 
 HTTP errors use `{error: {code: string, message: string}}`, including request validation errors. Codes below are stable for clients. Sanitize messages to avoid leaking local paths or secrets.
 
@@ -30,12 +34,15 @@ HTTP errors use `{error: {code: string, message: string}}`, including request va
 | `401` | `unauthorized` for absent or invalid operator credentials |
 | `404` | `source_not_found`, `run_not_found`, `incident_not_found`, or `evidence_unavailable` when the requested resource is unknown or the thumbnail is absent |
 | `409` | `run_active` if a run already owns the worker or `review_conflict` if the incident has left `pending` |
-| `422` | `validation_error` for malformed or invalid input |
+| `413` | `upload_too_large` when the MP4 exceeds the upload limit |
+| `415` | `upload_not_mp4` for unsupported content type or an invalid MP4 container |
+| `422` | `validation_error` for malformed input, `upload_metadata_invalid` or `upload_rights_required` for missing upload fields, and `decode_failed` for an unreadable first frame |
 | `503` | `frame_unavailable` if the requested run has no available frame or differs from the current frame's run. `storage_unavailable` if storage prevents the request from completing. |
 
 ## Source, health, and run
 
 - **Source** has `id`, `title`, `video_sha256` (64 lowercase hex characters), `rights_note`, `attribution`, `license_url` (string or `null`), and `geo_mode` (`calibrated` or `unavailable`) describing configured calibration eligibility. Register new asset content under a new source ID so historical incidents retain provenance.
+- **Simulated map reference.** When `GET /sources` lists an ID in `simulated_source_ids`, its projected points and world fences describe the sample's virtual ground plane. Use the incident's `source_id` to identify that reference before using or displaying any coordinates.
 - **Health** has `status` (`ok` or `degraded`), `version` (application version), and `inference_status` (`not_started`, `loading`, `ready`, or `error`). Before the model is exercised, report `not_started`. HTTP readiness and model readiness are separate signals.
 - **Run** has `id`, `source_id`, `mode` (always `replay`), `status`, `started_at`, `stopped_at` (timestamp or `null`), `error` (the HTTP error body's inner `{code, message}` object or `null`), and `model` (model provenance or `null` until verified). Model provenance has `name` (`yolo26n`), `weights_sha256`, `ultralytics_version`, and `tracker` (`bytetrack`).
 
