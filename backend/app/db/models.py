@@ -145,7 +145,10 @@ class AuditRow(Timestamped, Base):
         ),
         UniqueConstraint("incident_id", "action", name="uq_audit_entries_incident_action"),
         Index("ix_audit_entries_incident_id", "incident_id", "id"),
-        Index("uq_audit_entries_review", "incident_id", unique=True, sqlite_where=text("action <> 'created'")),
+        Index(
+            "uq_audit_entries_review", "incident_id", unique=True,
+            sqlite_where=text("action <> 'created'"), postgresql_where=text("action <> 'created'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

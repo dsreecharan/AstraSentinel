@@ -3,6 +3,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from sqlalchemy import Engine, text
+from sqlalchemy.exc import SQLAlchemyError
+
 from .errors import StartupError
 
 if os.name == "nt":
@@ -31,3 +34,27 @@ def exclusive_worker(database: Path) -> Iterator[None]:
             raise StartupError("worker_in_use", "Another Astra Fly process already owns this SQLite database") from None
         # Closing releases the lock, including on process exit. Keep its pathname stable.
         yield
+
+
+@contextmanager
+def exclusive_postgres_worker(engine: Engine) -> Iterator[None]:
+    """Pin the session-level lock to a dedicated connection for the app lifespan."""
+    try:
+        connection = engine.connect().execution_options(isolation_level="AUTOCOMMIT")
+    except SQLAlchemyError:
+        raise StartupError("storage_unavailable", "PostGIS connection unavailable") from None
+    with connection:
+        try:
+            acquired = connection.scalar(text("SELECT pg_try_advisory_lock(1095980114, 1)"))
+        except SQLAlchemyError:
+            connection.invalidate()
+            raise StartupError("storage_unavailable", "Could not reserve the PostGIS worker") from None
+        if not acquired:
+            raise StartupError("worker_in_use", "Another Astra Fly process already owns this PostGIS database")
+        try:
+            yield
+        finally:
+            try:
+                connection.execute(text("SELECT pg_advisory_unlock(1095980114, 1)"))
+            except SQLAlchemyError:
+                connection.invalidate()

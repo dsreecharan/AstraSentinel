@@ -190,6 +190,6 @@ Run the [system smoke test](docs/SMOKE_TEST.md) to verify real replay, both rule
 
 Use the [CPU benchmark](docs/BENCHMARKS.md) for local component timings and the [operator walkthrough](docs/DEMO_SCRIPT.md) for the three-minute demo. The [submission checklist](docs/SUBMISSION_CHECKLIST.md) records verification, release decisions, and the slide outline.
 
-## Containers later
+## Optional Phase 2 profiles
 
-After the local vertical slice is verified, add separate API and frontend images using the tested Python and Node versions, then add a Compose file with loopback port mappings and an explicit UI origin. Mount permissioned media read-only and keep the SQLite database in a writable private volume. Run the Alembic migration before API startup and keep one Uvicorn worker.
+The [Phase 2 runbook](docs/PHASE2.md) covers optional MediaMTX RTSP publishing and browser playback, a separate PostGIS store, and a read-only MAVSDK simulator probe. The MVP start commands continue to use SQLite, registered MP4s, and annotated MJPEG by default.

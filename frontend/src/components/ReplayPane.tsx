@@ -79,6 +79,13 @@ export function ReplayPane({ run, disconnected }: { run: Run | null; disconnecte
         <span>{run ? runLabels[run.status] : "Idle"}</span>
         {run && <span className="mono" title={run.id}>Run {run.id.slice(0, 10)}</span>}
       </footer>
+      {import.meta.env.VITE_RTSP_MONITOR === "true" && (
+        <nav className="panel-footer" aria-label="RTSP media-only monitor">
+          <span>RTSP monitor · media only</span>
+          <a href="http://127.0.0.1:8889/monitor/" target="_blank" rel="noreferrer">WebRTC</a>
+          <a href="http://127.0.0.1:8888/monitor/" target="_blank" rel="noreferrer">HLS</a>
+        </nav>
+      )}
     </section>
   );
 }

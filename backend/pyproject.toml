@@ -26,6 +26,8 @@ vision = [
     "ultralytics==8.4.216",
     "lap==0.5.14",
 ]
+postgis = ["psycopg[binary]==3.3.9"]
+telemetry = ["mavsdk==4.2.1"]
 
 [tool.setuptools.packages.find]
 include = ["app", "app.*"]
@@ -34,4 +36,7 @@ include = ["app", "app.*"]
 minversion = "9.0"
 testpaths = ["tests"]
 addopts = ["--strict-config", "--strict-markers"]
-markers = ["real_inference: opt-in smoke with local YOLO26n weights and a permissioned MP4"]
+markers = [
+    "real_inference: opt-in smoke with local YOLO26n weights and a permissioned MP4",
+    "phase2: opt-in integration against local services",
+]

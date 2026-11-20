@@ -120,7 +120,23 @@ def upgrade():
         sa.UniqueConstraint('incident_id', 'action', name='uq_audit_entries_incident_action'),
     )
     op.create_index('ix_audit_entries_incident_id', 'audit_entries', ['incident_id', 'id'], unique=False)
-    op.create_index('uq_audit_entries_review', 'audit_entries', ['incident_id'], unique=True, sqlite_where=sa.text("action <> 'created'"))
+    op.create_index(
+        'uq_audit_entries_review', 'audit_entries', ['incident_id'], unique=True,
+        sqlite_where=sa.text("action <> 'created'"), postgresql_where=sa.text("action <> 'created'"),
+    )
+    if op.get_context().dialect.name == "postgresql":
+        op.execute("""
+            CREATE FUNCTION astra_reject_audit_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
+            BEGIN
+                RAISE EXCEPTION 'audit entries are append-only' USING ERRCODE = '23000';
+            END;
+            $$
+        """)
+        op.execute("""
+            CREATE TRIGGER audit_entries_no_mutation BEFORE UPDATE OR DELETE OR TRUNCATE ON audit_entries
+            FOR EACH STATEMENT EXECUTE FUNCTION astra_reject_audit_mutation()
+        """)
+        return
     for action in ("UPDATE", "DELETE"):
         op.execute(f'''
             CREATE TRIGGER audit_entries_no_{action.lower()}
@@ -133,6 +149,8 @@ def upgrade():
 
 def downgrade():
     op.drop_table("audit_entries")
+    if op.get_context().dialect.name == "postgresql":
+        op.execute("DROP FUNCTION astra_reject_audit_mutation()")
     op.drop_table("incidents")
     op.drop_table("runs")
     op.drop_table("geofences")

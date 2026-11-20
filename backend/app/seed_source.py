@@ -3,14 +3,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import select
-from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 
-from .config import PROJECT_ROOT, database_path, media_directory
+from .config import PROJECT_ROOT, media_directory
 from .contracts.events import Source
 from .db.models import SourceRow
-from .db.session import sqlite_engine
+from .db.session import conflict_insert, storage_engine, storage_url
+from .errors import StartupError
 from .media import file_sha256, resolve_mp4
 
 
@@ -39,7 +39,7 @@ def source_from_environment() -> tuple[Source, Path]:
 def register_source(sessions: sessionmaker, source: Source, path: Path) -> None:
     with sessions.begin() as session:
         session.execute(
-            insert(SourceRow).values(**source.model_dump(), video_path=str(path)).on_conflict_do_nothing()
+            conflict_insert(session, SourceRow).values(**source.model_dump(), video_path=str(path)).on_conflict_do_nothing()
         )
         row = session.scalars(select(SourceRow).where(SourceRow.id == source.id)).one_or_none()
         if row is None or row.video_path != str(path) or Source.model_validate(row, from_attributes=True) != source:
@@ -50,17 +50,17 @@ def main() -> None:
     load_dotenv(PROJECT_ROOT / ".env")
     try:
         source, path = source_from_environment()
-        engine = sqlite_engine(database_path())
+        engine = storage_engine(storage_url())
         try:
             register_source(sessionmaker(engine), source, path)
         finally:
             engine.dispose()
-    except ValueError as error:
+    except (ValueError, StartupError) as error:
         raise SystemExit(str(error)) from None
     except (OSError, RuntimeError):
         raise SystemExit("Could not resolve or read the configured source file") from None
     except SQLAlchemyError:
-        raise SystemExit("Could not register source. Check the SQLite path and run the migrations.") from None
+        raise SystemExit("Could not register source. Check the database configuration and run the migrations.") from None
     print(f"Source registered: {source.id} ({source.video_sha256})")
 
 

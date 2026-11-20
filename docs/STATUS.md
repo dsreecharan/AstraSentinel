@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-**Prompt 7 benchmark, regressions, and submission materials verified on Windows on 2026-11-20.** The local replay and restart rehearsal passed again. The benchmark reports measured component and local pipeline timings for the licensed aerial excerpt and the labeled controlled scenario. The submission checklist records the open release decisions. [Submission checklist](SUBMISSION_CHECKLIST.md)
+**Prompt 8 optional profiles verified locally on Windows and WSL on 2026-11-20.** The default MVP passed the real replay and restart rehearsal before and after the changes. The separate Phase 2 branch adds RTSP browser monitoring, independent PostGIS storage, and a read-only MAVSDK simulator probe. [Phase 2 runbook](PHASE2.md) · [Submission checklist](SUBMISSION_CHECKLIST.md)
 
 The required validation path is licensed aerial MP4 → actual inference → anonymous ByteTrack → crowd and zone rules with geospatial context → SQLite → dashboard → operator review → durable audit.
 
@@ -60,9 +60,13 @@ The required validation path is licensed aerial MP4 → actual inference → ano
 - [x] Record limitations, untested behavior, and the slide/PDF content outline in the submission material.
 - [ ] Confirm the distribution license, collect notices for the selected package, approve media for sharing, and assemble the final slides or PDF.
 
-## P2 · Deferred until the MVP passes and work is requested
+## P2 · Optional profiles
 
-- [ ] RTSP/MediaMTX and WebRTC/HLS, PostgreSQL/PostGIS, Redis Streams, telemetry/simulation, evidence clips and configurable retention, and richer controls.
+- [x] MediaMTX on an opt-in Compose profile with authenticated RTSP publishing, local WebRTC/HLS players, and an independent MVP replay path.
+- [x] PostGIS on an opt-in Compose profile with separate records, spatial indices, v1 contract coverage and local transaction measurements.
+- [x] Read-only MAVSDK simulator probe with clock and uncertainty tests. Native UDP reception and socket cleanup verified with a synthetic MAVLink wire fixture.
+- [ ] Run a full PX4/Gazebo session. Redis Streams stay deferred until a split application producer or consumer needs durable cross-process delivery.
+- [ ] Evidence clips, configurable retention and richer controls remain outside this phase.
 - [ ] Treat any future opt-in 1:1 face comparison as a separately authorized, consented, human-reviewed task. Automatic mass identification and cross-camera identity linkage remain excluded.
 
 ## Validation log
@@ -266,6 +270,38 @@ Each column shows one measured pass with its own input and active rules. The aer
 | `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd test`, and `npm.cmd run build` from `frontend/` | All exit 0. Seven tests passed in two files, 0 failed and 0 skipped. The production build retained the MapLibre chunk-size warning. |
 
 The source target is [AstraSentinel on GitHub](https://github.com/dsreecharan/AstraSentinel). Repository publication does not settle the pending media-sharing and integrated-model distribution decisions. Platform and runtime coverage stays as recorded above.
+
+### Prompt 8 Phase 2 verification
+
+Windows 11, Intel Core 7 240H, Python 3.11.0, Edge and Node 24.13.0. Ran the optional Compose services using the existing Ubuntu WSL 2 Docker daemon (Engine 29.1.3, Compose 2.40.3) in its root context. Tested PostgreSQL 17.12, PostGIS 3.7.0, MediaMTX 1.21.4, FFmpeg 8.1.3, Psycopg 3.3.9 and MAVSDK 4.2.1.
+
+| Check | Exact result |
+| --- | --- |
+| Before edits, `python -m pytest -q -rs` with the approved YOLO26n weights, real aerial smoke MP4 and isolated SQLite | Exit 0, 67 passed in 16.86 s, zero failures or skips. |
+| Before and after edits, `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run build` from `frontend/` | All exit 0 on both runs. Seven tests passed each time. Vite reported the same MapLibre chunk-size warning. |
+| Before and after edits, `scripts/smoke_test.py prepare` and the existing Edge/Playwright smoke rehearsal from Prompt 6 | Both rehearsals exit 0. Aerial MJPEG rendered and reached EOF with zero incidents. The real controlled replay triggered both rules. The review and audit remained equal after backend restart and browser reconciliation. |
+| `uv sync --locked --offline --extra test --extra vision --python 3.11 --no-python-downloads` in a fresh environment, then the MVP `python -m pytest -q -rs` with the real model/footage | Exit 0, 68 passed, four opt-in infrastructure tests skipped, no failures. Verified Psycopg and MAVSDK were absent from that environment. |
+| `docker compose -f compose.phase2.yml config --services` with no profiles, then `--profile media --profile postgis up -d --wait` with a private environment file | The default selection was empty. With both profiles selected, both containers became healthy. |
+| `python -m alembic upgrade head` and `python -m alembic check` for both profiles | Both passed. SQLite advanced a scratch copy of revision `0002` to `0003`; PostGIS migrated its separate database. Alembic warns during reflection about the native geometry column type and reports no new upgrade operations. |
+| `python -m pytest -q -rs -s -m phase2` with the three service test settings in the runbook | Exit 0, four passed, 68 deselected. Covers authenticated RTSP ingest, HLS serving, native spatial queries, unchanged REST/review/WebSocket semantics, restart, append-only audit and native MAVSDK UDP cleanup. |
+| `python -m pytest -q -rs` with both the real model/footage and all Phase 2 integration settings | Exit 0, 72 passed in 31.05 s, zero failures or skips. |
+| `python scripts/smoke_test.py fixture` | Exit 0, authenticated deterministic API, review/audit persistence and reconnect passed. |
+| `node scripts/check_media.cjs` with Edge and an authorized 320×180, 10 FPS H.264 test pattern publisher | Exit 0. Each player decoded and advanced video. The then-running HLS playlist had been checked before navigation. |
+| `VITE_RTSP_MONITOR=true npm run build` in a temporary output directory and the default build's asset check | Exit 0. The media-only player links appeared in the opt-in assets. Both builds succeeded. |
+| Compose `down --volumes` for the disposable verification project | Exit 0. Both test containers, both networks, and the scratch volume were removed. |
+
+The initial media HTTP test followed neither the HLS playlist redirect nor its target. Enabling redirects in the test verified the actual playlist. The initial MAVSDK test found the pinned package exposed a native subscription callback, which the adapter now uses. The initial PostGIS schema check reflected extension-owned tables. The PostgreSQL migration filter is now limited to application tables.
+
+| Local comparison | Observed result |
+| --- | ---: |
+| SQLite median incident creation plus review, including audit commits | 7.175 ms |
+| PostGIS median for the same workload | 8.730 ms |
+| WebRTC browser navigation to advancing decoded video | 1,330.9 ms |
+| HLS browser navigation to advancing decoded video | 100.7 ms |
+
+The storage figures are from the same test, with 30 measured synthetic incidents per profile and five warm-ups. PostGIS includes the local WSL connection. Player startup figures are one observation each with an active publisher and a prewarmed HLS manifest. They do not compare transport latency or prove sustained throughput. Follow the [exact setup and commands](PHASE2.md).
+
+**Unverified.** Full PX4/Gazebo SITL, real airframes, sustained or remote media traffic, capture-to-display latency, and other browser/platform combinations. The PostGIS profile is a separate store. Redis remains deferred because the Astra Fly application still has one producer.
 
 Use these commands for the planning commit in the intended Git checkout.
 

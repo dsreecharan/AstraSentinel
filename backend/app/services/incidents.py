@@ -2,11 +2,11 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import func, select, update
-from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import sessionmaker
 
 from app.contracts.events import AuditEntry, Incident, IncidentCandidate, ReviewInput, ReviewStatus
 from app.db.models import AuditRow, IncidentRow
+from app.db.session import conflict_insert
 from app.errors import ServiceError
 from app.media import MAX_THUMBNAIL_BYTES
 
@@ -40,7 +40,7 @@ class IncidentService:
         values = candidate.model_dump(exclude={"observed_at"})
         with self.sessions.begin() as session:
             row = session.scalars(
-                insert(IncidentRow)
+                conflict_insert(session, IncidentRow)
                 .values(
                     **values, id=uuid4().hex, created_at=created_at,
                     observed_at=candidate.observed_at, review_status="pending",

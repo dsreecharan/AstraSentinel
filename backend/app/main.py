@@ -16,12 +16,12 @@ from sqlalchemy.orm import sessionmaker
 
 from .api import runs, storage, websocket
 from .analysis.config import AnalysisSettings
-from .config import database_path, local_path, media_directory
+from .config import local_path, media_directory
 from .contracts.events import ErrorDetail, ErrorEnvelope, Health
 from .db.runs import RunStore
-from .db.session import sqlite_engine
+from .db.session import storage_engine, storage_url
 from .errors import ServiceError, StartupError
-from .runtime import exclusive_worker
+from .runtime import exclusive_postgres_worker, exclusive_worker
 from .services.events import EventBroker
 from .services.incidents import IncidentService
 from .vision.engine import VisionEngine
@@ -47,8 +47,9 @@ def create_app(
     if urlsplit(origin).port == 0:
         raise ValueError("ASTRA_FRONTEND_ORIGIN must specify a usable port")
 
-    path = db_path if db_path is not None else database_path()
-    engine = sqlite_engine(path)
+    url = storage_url(db_path)
+    engine = storage_engine(url)
+    path = Path(url.database) if url.get_backend_name() == "sqlite" else None
     sessions = sessionmaker(engine)
     broker = EventBroker()
     try:
@@ -70,23 +71,28 @@ def create_app(
 
     def recover() -> None:
         try:
-            video.startup(path.exists() and inspect(engine).has_table("runs"))
+            if path is None and not inspect(engine).has_table("runs"):
+                raise StartupError("storage_unavailable", "Run the PostGIS migrations before starting")
+            video.startup(path is None or (path.exists() and inspect(engine).has_table("runs")))
         except SQLAlchemyError:
-            raise StartupError("storage_unavailable", "Check the SQLite database and run the migrations") from None
+            raise StartupError("storage_unavailable", "Check the database and run the migrations") from None
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        with exclusive_worker(path):
-            broker.start()
-            try:
-                await to_thread.run_sync(recover)
-                yield
-            finally:
+        lock = exclusive_worker(path) if path is not None else exclusive_postgres_worker(engine)
+        try:
+            with lock:
+                broker.start()
                 try:
-                    await to_thread.run_sync(video.shutdown)
+                    await to_thread.run_sync(recover)
+                    yield
                 finally:
-                    broker.stop()
-                    engine.dispose()
+                    try:
+                        await to_thread.run_sync(video.shutdown)
+                    finally:
+                        broker.stop()
+        finally:
+            engine.dispose()
 
     app = FastAPI(title="Astra Fly API", version=VERSION, docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.frontend_origin = origin
