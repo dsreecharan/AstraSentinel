@@ -18,6 +18,8 @@ from alembic.config import Config
 from sqlalchemy.orm import sessionmaker
 
 from app.contracts.events import Source
+from app.contracts.geo import Geofence
+from app.db.models import GeofenceRow
 from app.db.session import sqlite_engine
 from app.media import file_sha256
 from app.seed_source import register_source
@@ -116,39 +118,48 @@ def controlled_video(still: Path, output: Path) -> None:
         writer.release()
 
 
-def prepare(output: Path, still: Path, weights: Path) -> None:
-    require(AERIAL.is_file() and file_sha256(AERIAL) == AERIAL_SHA, "Supply the verified aerial excerpt listed in data/README.md")
+def prepare(output: Path, still: Path, weights: Path, *, controlled_only: bool = False) -> None:
+    if not controlled_only:
+        require(AERIAL.is_file() and file_sha256(AERIAL) == AERIAL_SHA,
+                "Supply the verified aerial excerpt listed in data/README.md, or use --controlled-only")
     require(still.is_file() and file_sha256(still) == STILL_SHA, "Supply the pinned astronaut.png listed in docs/SMOKE_TEST.md")
     require(weights.is_file() and weights.suffix.lower() == ".pt", "Supply a trusted local YOLO26n .pt checkpoint")
     output = output.resolve()
     output.mkdir(parents=True)
     media = output / "media"
     media.mkdir()
-    aerial = media / AERIAL.name
-    shutil.copyfile(AERIAL, aerial)
     controlled = media / "controlled-two-tracks.mp4"
     controlled_video(still, controlled)
+    controlled_sha = file_sha256(controlled)
+    fence = {
+        "source_id": CONTROLLED, "label": "Controlled crossing at x=385",
+        "space_type": "image", "enabled": True, "frame_size_px": [1152, 512],
+        "geometry": {"type": "Polygon", "coordinates": [[[385, 0], [610, 0], [610, 512], [385, 512], [385, 0]]]},
+    }
     database = output / "smoke.sqlite3"
     migrate(database)
     engine = sqlite_engine(database)
     try:
         sessions = sessionmaker(engine)
-        for source, path in (
-            (Source(
+        if not controlled_only:
+            aerial = media / AERIAL.name
+            shutil.copyfile(AERIAL, aerial)
+            register_source(sessions, Source(
                 id="aerial-intersection-validation", title="Aerial intersection - licensed excerpt",
                 video_sha256=AERIAL_SHA, rights_note="Local verification excerpt. Pexels license and terms apply.",
                 attribution="Matthias Groeneveld via Pexels", license_url="https://www.pexels.com/license/",
                 geo_mode="unavailable",
-            ), aerial),
-            (Source(
-                id=CONTROLLED, title="Controlled fixture - NASA still with two tracks",
-                video_sha256=file_sha256(controlled),
-                rights_note="Public-domain NASA still assembled into a controlled MP4. Real person inference on the composite.",
-                attribution="NASA via scikit-image astronaut()", geo_mode="unavailable",
-                license_url="https://scikit-image.org/docs/0.26.x/api/skimage.data.html#skimage.data.astronaut",
-            ), controlled),
-        ):
-            register_source(sessions, source, path)
+            ), aerial)
+        register_source(sessions, Source(
+            id=CONTROLLED, title="Controlled fixture - NASA still with two tracks", video_sha256=controlled_sha,
+            rights_note="Public-domain NASA still assembled into a controlled MP4. Real person inference on the composite.",
+            attribution="NASA via scikit-image astronaut()", geo_mode="unavailable",
+            license_url="https://scikit-image.org/docs/0.26.x/api/skimage.data.html#skimage.data.astronaut",
+        ), controlled)
+        if controlled_only:
+            zone = Geofence(id="controlled-crossing", **fence)
+            with sessions.begin() as session:
+                session.add(GeofenceRow(**zone.model_dump(mode="json")))
     finally:
         engine.dispose()
     rules = output / "rules.json"
@@ -165,13 +176,9 @@ def prepare(output: Path, still: Path, weights: Path) -> None:
     (output / ".env").write_text(
         "".join(f"{name}={json.dumps(value, ensure_ascii=False)}\n" for name, value in env.items()), encoding="utf-8"
     )
-    fence = {
-        "source_id": CONTROLLED, "label": "Controlled crossing at x=385",
-        "space_type": "image", "enabled": True, "frame_size_px": [1152, 512],
-        "geometry": {"type": "Polygon", "coordinates": [[[385, 0], [610, 0], [610, 512], [385, 512], [385, 0]]]},
-    }
     (output / "zone.json").write_text(json.dumps(fence, indent=2) + "\n", encoding="utf-8")
-    print(f"PASS two registered sources and zero seeded incidents. Controlled MP4 SHA-256 {file_sha256(controlled)}")
+    source_summary = "one registered source, one image ROI" if controlled_only else "two registered sources"
+    print(f"PASS {source_summary} and zero seeded incidents. Controlled MP4 SHA-256 {controlled_sha}")
 
 
 def main() -> int:
@@ -182,12 +189,13 @@ def main() -> int:
     prep.add_argument("--output", type=Path, required=True, help="A new directory for private verification files.")
     prep.add_argument("--still", type=Path, required=True)
     prep.add_argument("--weights", type=Path, default=ROOT / "YOLO26/yolo26n.pt")
+    prep.add_argument("--controlled-only", action="store_true", help="Prepare the controlled MP4 and ROI without the private aerial excerpt")
     args = parser.parse_args()
     try:
         if args.mode == "fixture":
             fixture()
         else:
-            prepare(args.output, args.still, args.weights)
+            prepare(args.output, args.still, args.weights, controlled_only=args.controlled_only)
     except (OSError, RuntimeError, ValueError) as error:
         print(f"FAIL {error}", file=sys.stderr)
         return 1

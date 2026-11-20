@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-**Prompt 7 benchmark, regressions, and submission materials verified on Windows on 2026-11-20.** The local replay and restart rehearsal passed again. The benchmark reports measured component and local pipeline timings for the licensed aerial excerpt and the labeled controlled scenario. The submission checklist records the open release decisions. [Submission checklist](SUBMISSION_CHECKLIST.md)
+**Main-branch demo and documentation verified on Windows on 2026-11-20.** The controlled walkthrough can start from a fresh checkout with the documented NASA still and local YOLO26n checkpoint. It starts with an empty incident queue and demonstrates both enabled rules through real inference and restart recovery. The [benchmark report](BENCHMARKS.md) records earlier measurements for both validation sources. The [submission checklist](SUBMISSION_CHECKLIST.md) records open release decisions.
 
 The required validation path is licensed aerial MP4 → actual inference → anonymous ByteTrack → crowd and zone rules with geospatial context → SQLite → dashboard → operator review → durable audit.
 
@@ -56,6 +56,7 @@ The required validation path is licensed aerial MP4 → actual inference → ano
 ## P1 · Demo and submission readiness
 
 - [x] Package reproducible smoke commands, the operator walkthrough, source and model provenance, license inventory, and verified screenshots and recording.
+- [x] Rehearse the clean-checkout controlled demo independently of the private aerial excerpt. Consolidate the public setup and configuration guidance.
 - [x] Record benchmark hardware, source, model, workload, measurement boundaries, and results.
 - [x] Record limitations, untested behavior, and the slide/PDF content outline in the submission material.
 - [ ] Confirm the distribution license, collect notices for the selected package, approve media for sharing, and assemble the final slides or PDF.
@@ -267,11 +268,16 @@ Each column shows one measured pass with its own input and active rules. The aer
 
 The source target is [AstraSentinel on GitHub](https://github.com/dsreecharan/AstraSentinel). Repository publication does not settle the pending media-sharing and integrated-model distribution decisions. Platform and runtime coverage stays as recorded above.
 
-Use these commands for the planning commit in the intended Git checkout.
+### Main-branch demo and documentation cleanup
 
-```text
-git add -- AGENTS.md docs/CONTRACTS.md docs/DECISIONS.md docs/STATUS.md
-git commit -m "docs: freeze MVP architecture and agent rules"
-```
+| Command or check | Result |
+| --- | --- |
+| `uv sync --locked --offline --extra test --extra vision --python 3.11 --no-python-downloads` and `npm.cmd ci --offline --no-audit --no-fund` in an exported clean checkout | **PASS**, both exit 0. Installed 68 Python and 163 npm packages from cache. |
+| `.\.venv\Scripts\python.exe -m pytest -q -rs` from `backend/`, with `ASTRA_MODEL_WEIGHTS` and `ASTRA_INFERENCE_SMOKE_MP4` pointing to the verified checkpoint and licensed excerpt and `ASTRA_DB_PATH` isolated | **PASS**, exit 0, 67 passed in 16.34 s, 0 failed, 0 skipped. |
+| `npm.cmd run lint`, `npm.cmd run typecheck`, `npm.cmd test`, and `npm.cmd run build` from `frontend/` | **PASS**, all exit 0. Seven tests passed in two files, 0 failed, 0 skipped. Vite reported the existing MapLibre chunk-size warning. |
+| `.\backend\.venv\Scripts\python.exe scripts/smoke_test.py fixture` | **PASS**, exit 0. TEST DATA verified durability, idempotency, authentication, review, audit, restart, and WebSocket reconnect. |
+| `.\backend\.venv\Scripts\python.exe scripts/smoke_test.py prepare --output <new-stage> --still <verified-still>` | **PASS**, exit 0. Both original sources registered with zero incidents and zero zones. The zone JSON is available for the operator's later API setup. |
+| `.\backend\.venv\Scripts\python.exe scripts/smoke_test.py prepare --controlled-only --output <new-stage> --still <verified-still> --weights data/weights/yolo26n.pt` and `node.exe <stage>/browser_smoke.cjs` from the clean checkout | **PASS**, both exit 0, with the freshly installed backend and Vite dev server. The Edge rehearsal received annotated MJPEG, both candidates and thumbnails, and WebSocket notifications. The crowd candidate was saved at 200 ms of footage, and the image-region entry was saved at 3,300 ms. SQLite and REST agreed on the acknowledgement and audit after restart and browser reconnect. A duplicate backend process was refused. Reproduce the workflow with the [controlled quickstart](../README.md#run-the-controlled-demo) and [operator walkthrough](DEMO_SCRIPT.md). |
+| Internal Markdown path and anchor check, `git diff --cached --check` | **PASS**, exit 0. Verified local documentation links and staged whitespace. |
 
-For each subsequent task, update the gates and append the exact verification commands, pass/fail/skip counts, and remaining untested functionality here.
+The verification recordings and generated demo media remain local. Linux/WSL and browsers other than Edge were untested in this pass. The controlled clip exercises the rules; it provides no detector accuracy or aerial-event accuracy estimate.

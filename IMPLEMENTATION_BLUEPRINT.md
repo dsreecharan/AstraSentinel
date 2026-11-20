@@ -281,4 +281,4 @@ Fallback in case of a broken live demo: an honest, pre-recorded screen capture o
 - NIST face evaluation: https://pages.nist.gov/frvt/html/frvt_demographics.html
 - India's drone rules: https://www.civilaviation.gov.in/ministry-documents/rules/drones-rules-2021-dated-25-august-2021
 
-**Next action:** Give Codex the prompts in `CODEX_PROMPTS.md`, one at a time, in order. Verify each gate before issuing the next.
+For the implemented MVP, start with the [project README](README.md) and [verification log](docs/STATUS.md).

@@ -2,9 +2,9 @@
 
 ## Before the walkthrough
 
-1. Use the [system smoke-test runbook](SMOKE_TEST.md) with a fresh verification stage, the verified local checkpoint, the licensed aerial excerpt, and the generated controlled replay. Register the image ROI once for this database.
-2. Start one backend on `127.0.0.1:8000` with the stage's private `.env`. Start the built frontend on port 5173 and open [the local dashboard](http://localhost:5173). Confirm **Backend online**, **Events connected**, and an empty incident queue.
-3. Open **Operator access** and enter the private token before screen sharing. Select the aerial excerpt, bring up **Source provenance**, and keep the verified fallback recording open in a second tab.
+1. Use the [controlled demo quickstart](../README.md#run-the-controlled-demo) for a fresh checkout. For the two-source presentation below, use the [system smoke-test runbook](SMOKE_TEST.md) and register the image ROI once. The controlled-only preparation already configures it.
+2. Start one backend on `127.0.0.1:8000` with the stage's private `.env`. Start the frontend on port 5173 and open the dashboard. Confirm **Backend online**, **Events connected**, and an empty incident queue. [Local dashboard](http://localhost:5173)
+3. Open **Operator access** and enter the private token before screen sharing. Select the first replay and bring up **Source provenance**. If available, keep a recording of a verified run open in a second tab.
 
 ## Presenter timing
 
@@ -16,6 +16,8 @@
 | 1:35–2:15 | Show **Geolocation unavailable — image-space alert**. “The zone is defined in pixels. World location and measured location uncertainty are unavailable.” Acknowledge the zone candidate with the reason “Verified the controlled image-ROI crossing in the replay evidence.” Read the decision and reason in **Audit timeline**. |
 | 2:15–2:45 | Stop the backend with Ctrl+C, let the browser show reconnecting, and restart against the same stage. Show **Events connected** and the saved review in the same tab. |
 | 2:45–3:00 | Close with the local, offline CPU results and state what was measured. “The benchmark times a confirmation frame through the software pipeline. It provides no aerial accuracy or capture-to-alert measurement.” |
+
+For a controlled-only presentation, use the opening to show the fixture provenance and explain the two animated copies of the NASA still. Continue with the controlled replay at 0:55.
 
 ## Fallback during the demonstration
 

@@ -2,9 +2,11 @@
 
 Run this on the demo machine after installing the locked dependencies. Use a fresh private verification directory each time. The team database and its existing records are independent of this walkthrough.
 
+Use the [controlled-only quickstart](../README.md#run-the-controlled-demo) for a fresh checkout. The procedure below runs both the aerial and controlled inputs.
+
 ## Inputs
 
-- Put the approved four-second aerial excerpt in `data/demo_video/aerial-intersection-validation.mp4`. Its expected SHA-256 is `2b08fdd659f337e7ce4898098b09c64a3f49c204854cdfb02beb623ba8ea71b7`. Obtain the exact excerpt from the team's private copy. For replacement footage, register the team's own approved MP4 with its own source ID, digest, and attribution using the README. [Aerial source record](../data/README.md#local-aerial-replay-validation-source) · [Register an approved MP4](../README.md#register-one-licensed-mp4)
+- Put the approved four-second aerial excerpt in `data/demo_video/aerial-intersection-validation.mp4`. Its expected SHA-256 is `2b08fdd659f337e7ce4898098b09c64a3f49c204854cdfb02beb623ba8ea71b7`. Obtain the exact excerpt from the team's private copy. For replacement footage, register the team's own approved MP4 with its own source ID, digest, and attribution. [Aerial source record](../data/README.md#local-aerial-replay-validation-source) · [Register an approved MP4](CONFIGURATION.md#register-one-licensed-mp4)
 - Use the trusted YOLO26n detection checkpoint at `YOLO26/yolo26n.pt`, or pass its local path with `--weights`. The checkpoint used in verification had SHA-256 `9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef`. [Official weights release](https://github.com/ultralytics/assets/releases/tag/v8.4.0)
 - Obtain the pinned NASA sample `astronaut.png` from scikit-image v0.25.2. Its expected SHA-256 is `88431cd9653ccd539741b555fb0a46b61558b301d4110412b5bc28b5e3ea6cb5`. The controlled replay uses a moving and a fixed copy of the same public-domain still to exercise two detected person tracks. It depicts a controlled rule scenario. [Pinned PNG](https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/astronaut.png) · [NASA attribution and terms](https://scikit-image.org/docs/0.26.x/api/skimage.data.html#skimage.data.astronaut)
 

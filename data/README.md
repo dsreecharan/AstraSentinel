@@ -1,6 +1,6 @@
 # Local source assets and fixtures
 
-Put permissioned aerial MP4s in the local `data/demo_video/` directory. Keep source media and retained evidence private and use an authorized download or private handoff when redistribution is restricted. Store only deterministic, synthetic, non-identifying fixtures in `data/fixtures/` and `backend/tests/fixtures/`. Test JSON describes synthetic observations and incidents and is used only by tests.
+Put permissioned aerial MP4s in the local `data/demo_video/` directory. Keep source media and retained evidence private and use an authorized download or private handoff when redistribution is restricted. The deterministic synthetic fixtures in `backend/tests/fixtures/` are used by tests.
 
 ## Provenance and release inventory
 
@@ -8,7 +8,7 @@ Put permissioned aerial MP4s in the local `data/demo_video/` directory. Keep sou
 | --- | --- | --- |
 | Aerial intersection excerpt | Matthias Groeneveld via Pexels. [Original video](https://www.pexels.com/video/aerial-view-of-busy-urban-intersection-35172060/) · [License](https://www.pexels.com/license/) · [Terms](https://www.pexels.com/terms-of-service/) | Four-second, 10 FPS local replay and CPU benchmark. Credit the creator and link the original. Keep the excerpt out of the source repo. Check the intended distribution of the recording and slides that show it. |
 | NASA still and derived two-track MP4 | NASA sample distributed through scikit-image and described as public domain. [Pinned source still](https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/astronaut.png) · [Attribution](https://scikit-image.org/docs/0.26.x/api/skimage.data.html#skimage.data.astronaut) | Reproducible, explicitly labeled controlled verification. Two copies of one still exercise two tracks and an image-space entry, with no field-ground-truth claim. Credit NASA via scikit-image. |
-| Offline test fixtures | Team Astra Fly's generated test frames and authored JSON under `backend/tests/` and `data/fixtures/`. | Deterministic API and rule tests only. The normal runtime uses real inference. |
+| Offline test fixtures | Team Astra Fly's generated test frames and authored JSON under `backend/tests/`. | Deterministic API and rule tests only. The normal runtime uses real inference. |
 | YOLO26n weights and Ultralytics ByteTrack configuration | Official `yolo26n.pt` and the `bytetrack.yaml` shipped by Ultralytics 8.4.216. Ultralytics lists AGPL-3.0 and an Enterprise option. [Weights release](https://github.com/ultralytics/assets/releases/tag/v8.4.0) · [Ultralytics licensing](https://www.ultralytics.com/license) | Installed locally. Confirm the team's distribution license and source/notice obligations before sharing the integrated app. Supply a verified download link for the checkpoint. |
 | Basemap and dependency notices | The demo MapLibre style is local. Frontend and backend dependency versions are in the two lockfiles. | World features render from app GeoJSON. There are no external map tiles in the verified demo. Collect notices for the exact packages and any native binaries included in a distribution. |
 
